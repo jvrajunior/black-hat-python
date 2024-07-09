@@ -89,38 +89,42 @@ def client_sender(buffer):
         client.connect((target,port))
 
         if len(buffer):
-            client.send(buffer)
+            client.send(buffer.encode('utf-8'))
 
         while True:
             # now wait for data back
             recv_len = 1
-            response = ""
+            response = b""
 
             while recv_len:
 
-                data        = client.recv(4096).decode()
+                data        = client.recv(4096)
                 recv_len    = len(data)
                 response    += data
 
                 if recv_len < 4096:
                     break
             
-            print(response)
+            print(response.decode('latin1'), end="", flush=True)
 
             # wait for more input
             buffer = input("")
             buffer += "\n"
 
             # send it off
-            client.send(buffer.encode())
-    except:
-        print("[*] Exception! Exiting.")
+            client.send(buffer.encode('utf-8'))
 
-        # tear down the connection
+    except socket.error as exc:
+        # just catch generic errors - you can do your homework to beef this up
+        print("[*] Exception! Exiting.")
+        print(f"[*] Caught exception socket.error: {exc}")
+
+        # teardown the connection
         client.close()
 
 def server_loop():
     global target
+    global port
 
     # if no target is defined, we listen on all interfaces
     if not len(target):
@@ -134,7 +138,7 @@ def server_loop():
         client_socket, addr = server.accept()
 
         # spin off a thread to handle our new client
-        client_thread = threading.Thread(target=client_handler, args=(client_socket,))
+        client_thread = threading.Thread(target=client_handler,args=(client_socket,))
         client_thread.start()
 
 def run_command(command):
@@ -174,7 +178,7 @@ def client_handler(client_socket):
         # now we take these bytes and try to write them out
         try:
             file_descriptor = open(upload_destination,"wb")
-            file_descriptor.write(file_buffer)
+            file_descriptor.write(file_buffer.encode('utf-8'))
             file_descriptor.close()
 
             # acknowledge that we wrote the file out
@@ -194,16 +198,19 @@ def client_handler(client_socket):
     if command:
         while True:
             # show a simple prompt
-            client_socket.send(b"<BHP:#> ")
+            client_socket.send("<BHP:#> ".encode('utf-8'))
 
             # now we receive until we see a linefeed (enter key)
-            cmd_buffer = ""
-            while "\n" not in cmd_buffer:
-                cmd_buffer += str(client_socket.recv(1024))
+            cmd_buffer = b""
+            while b"\n" not in cmd_buffer:
+                cmd_buffer += client_socket.recv(1024)
 
             # send back the command output
-            response = run_command(cmd_buffer)
+            response = run_command(cmd_buffer.decode())
 
+            if isinstance(response, str):
+                response = response.encode('utf-8')
+                
             #send back the response
             client_socket.send(response)
 
