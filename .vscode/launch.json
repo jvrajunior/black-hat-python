@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["-t","localhost","-p","1234"]
+            "args": ["127.0.0.1","21","192.168.5.30","21","True"]
         }
     ]
 }
